@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roleplay Chat</title>
+
+<style>
+:root{
+    --theme:#efddea;
+    --me:#f5eac7;
+}
+body{margin:0;font-family:Arial;background:#f5f5f5}
+
+.topbar{display:flex;gap:8px;padding:10px;background:white;border-bottom:1px solid #ddd}
+.userBtn{padding:8px 12px;border-radius:20px;border:1px solid #ccc;cursor:pointer}
+.settingBtn{cursor:pointer}
+
+.notice{background:#fff3b0;padding:10px;text-align:center}
+
+.chat{height:65vh;overflow:auto;padding:20px}
+
+.msg{display:flex;margin-bottom:18px}
+.msg img{width:40px;height:40px;border-radius:50%;margin-right:8px}
+
+.bubble{background:var(--theme);padding:12px 18px;border-radius:20px;max-width:60%;white-space:pre-line}
+.me{justify-content:flex-end}
+.me .bubble{background:var(--me)}
+
+.msgImgs img{width:120px;margin-top:8px;border-radius:10px}
+
+.inputBox{position:fixed;bottom:0;width:100%;background:white;padding:10px;display:flex;gap:6px;border-top:1px solid #ddd}
+textarea{width:40%;height:40px}
+
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+background:white;padding:20px;display:none;border-radius:12px}
+</style>
+</head>
+
+<body>
+
+<div class="topbar" id="topbar"></div>
+<div class="notice" id="notice">공지 없음</div>
+<div class="chat" id="chat"></div>
+
+<div class="inputBox">
+<textarea id="msgInput" placeholder="메시지"></textarea>
+<input type="file" id="imgInput" multiple>
+<button onclick="sendMsg()">전송</button>
+</div>
+
+<script>
+const users={
+WOOYEON:{name:"WOOYEON",img:"https://i.pravatar.cc/100?img=1",badge:"✔",theme:"#efddea"},
+YEIN:{name:"YEIN",img:"https://i.pravatar.cc/100?img=2",badge:"✔",theme:"#efddea"},
+HASEO:{name:"HASEO",img:"https://i.pravatar.cc/100?img=3",badge:"✔",theme:"#efddea"},
+ELIN:{name:"ELIN",img:"https://i.pravatar.cc/100?img=4",badge:"✔",theme:"#efddea"},
+CHAERIN:{name:"CHAERIN",img:"https://i.pravatar.cc/100?img=5",badge:"✔",theme:"#efddea"},
+}
+
+let current="WOOYEON"
+let notice=localStorage.getItem("notice") || "공지 없음"
+document.getElementById("notice").innerText=notice
+
+let messages=JSON.parse(localStorage.getItem("messages") || "[]")
+
+function saveData(){
+    localStorage.setItem("messages",JSON.stringify(messages))
+    localStorage.setItem("notice",notice)
+}
+
+function renderTop(){
+    const bar=document.getElementById("topbar")
+    bar.innerHTML=""
+    Object.keys(users).forEach(u=>{
+        bar.innerHTML+=`
+        <button class="userBtn" onclick="switchUser('${u}')">${users[u].name}</button>
+        `
+    })
+}
+renderTop()
+
+function switchUser(u){
+    current=u
+    document.documentElement.style.setProperty('--theme',users[u].theme)
+    renderChat()
+}
+
+function renderChat(){
+    const chat=document.getElementById("chat")
+    chat.innerHTML=""
+    messages.forEach(m=>{
+        const user=users[m.from]
+        const me=(m.from===current)?"msg me":"msg"
+
+        let imgs=""
+        if(m.images){
+            imgs='<div class="msgImgs">'
+            m.images.forEach(i=>imgs+=`<img src="${i}">`)
+            imgs+='</div>'
+        }
+
+        chat.innerHTML+=`
+        <div class="${me}">
+            <img src="${user.img}">
+            <div>
+            <b>${user.name} ${user.badge}</b>
+            <div class="bubble">${m.text||""}${imgs}</div>
+            </div>
+        </div>
+        `
+    })
+}
+
+function sendMsg(){
+    const text=document.getElementById("msgInput").value
+    const files=document.getElementById("imgInput").files
+    let imgs=[]
+
+    for(let f of files){
+        imgs.push(URL.createObjectURL(f))
+    }
+
+    messages.push({from:current,text:text,images:imgs})
+    saveData()
+
+    document.getElementById("msgInput").value=""
+    document.getElementById("imgInput").value=""
+    renderChat()
+}
+
+/* Enter 전송 / Shift+Enter 줄바꿈 */
+document.getElementById("msgInput").addEventListener("keydown",function(e){
+    if(e.key==="Enter" && !e.shiftKey){
+        e.preventDefault()
+        sendMsg()
+    }
+})
+
+renderChat()
+</script>
+
+</body>
+</html>
