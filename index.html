@@ -3,142 +3,176 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roleplay Chat</title>
+<title>Roleplay Community</title>
 
 <style>
-:root{
-    --theme:#efddea;
-    --me:#f5eac7;
+body{margin:0;font-family:Arial;background:#f3f3f3}
+
+header{padding:10px;background:white;border-bottom:1px solid #ddd;font-weight:bold}
+
+.roomList{
+width:200px;
+background:white;
+position:fixed;
+top:0;
+bottom:0;
+border-right:1px solid #ddd;
+overflow:auto;
 }
-body{margin:0;font-family:Arial;background:#f5f5f5}
 
-.topbar{display:flex;gap:8px;padding:10px;background:white;border-bottom:1px solid #ddd}
-.userBtn{padding:8px 12px;border-radius:20px;border:1px solid #ccc;cursor:pointer}
-.settingBtn{cursor:pointer}
+.roomBtn{display:block;padding:12px;border-bottom:1px solid #eee;cursor:pointer}
 
-.notice{background:#fff3b0;padding:10px;text-align:center}
+.main{
+margin-left:200px;
+display:flex;
+flex-direction:column;
+height:100vh;
+}
 
-.chat{height:65vh;overflow:auto;padding:20px}
+.notice{background:#fff3b0;padding:8px;text-align:center}
 
-.msg{display:flex;margin-bottom:18px}
-.msg img{width:40px;height:40px;border-radius:50%;margin-right:8px}
+.topUsers{padding:8px;background:white;border-bottom:1px solid #ddd}
 
-.bubble{background:var(--theme);padding:12px 18px;border-radius:20px;max-width:60%;white-space:pre-line}
-.me{justify-content:flex-end}
-.me .bubble{background:var(--me)}
+.chat{flex:1;overflow:auto;padding:20px}
 
-.msgImgs img{width:120px;margin-top:8px;border-radius:10px}
+.msg{display:flex;margin-bottom:16px}
+.msg.me{justify-content:flex-end}
+.msg img{width:36px;height:36px;border-radius:50%;margin-right:8px}
 
-.inputBox{position:fixed;bottom:0;width:100%;background:white;padding:10px;display:flex;gap:6px;border-top:1px solid #ddd}
-textarea{width:40%;height:40px}
+.bubble{background:#efddea;padding:10px 14px;border-radius:14px;max-width:60%;white-space:pre-line}
+.me .bubble{background:#f5eac7}
 
-.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-background:white;padding:20px;display:none;border-radius:12px}
+.msgImgs img{width:120px;margin-top:6px;border-radius:8px}
+
+.inputBox{display:flex;padding:10px;background:white;border-top:1px solid #ddd}
+textarea{flex:1;height:45px}
 </style>
 </head>
 
 <body>
 
-<div class="topbar" id="topbar"></div>
+<div class="roomList" id="roomList"></div>
+
+<div class="main">
+<header id="roomTitle">Room</header>
 <div class="notice" id="notice">공지 없음</div>
+<div class="topUsers" id="userBar"></div>
 <div class="chat" id="chat"></div>
 
 <div class="inputBox">
-<textarea id="msgInput" placeholder="메시지"></textarea>
+<textarea id="msgInput"></textarea>
 <input type="file" id="imgInput" multiple>
 <button onclick="sendMsg()">전송</button>
+</div>
 </div>
 
 <script>
 const users={
-WOOYEON:{name:"WOOYEON",img:"https://i.pravatar.cc/100?img=1",badge:"✔",theme:"#efddea"},
-YEIN:{name:"YEIN",img:"https://i.pravatar.cc/100?img=2",badge:"✔",theme:"#efddea"},
-HASEO:{name:"HASEO",img:"https://i.pravatar.cc/100?img=3",badge:"✔",theme:"#efddea"},
-ELIN:{name:"ELIN",img:"https://i.pravatar.cc/100?img=4",badge:"✔",theme:"#efddea"},
-CHAERIN:{name:"CHAERIN",img:"https://i.pravatar.cc/100?img=5",badge:"✔",theme:"#efddea"},
+SEORIN:{img:"https://i.pravatar.cc/100?img=1"},
+HARI:{img:"https://i.pravatar.cc/100?img=2"},
+ROSSY:{img:"https://i.pravatar.cc/100?img=3"},
+DANA:{img:"https://i.pravatar.cc/100?img=4"}
 }
 
-let current="WOOYEON"
-let notice=localStorage.getItem("notice") || "공지 없음"
-document.getElementById("notice").innerText=notice
+let rooms=JSON.parse(localStorage.getItem("rooms")||"{}")
 
-let messages=JSON.parse(localStorage.getItem("messages") || "[]")
-
-function saveData(){
-    localStorage.setItem("messages",JSON.stringify(messages))
-    localStorage.setItem("notice",notice)
+if(Object.keys(rooms).length===0){
+rooms={
+"room1":{title:"One and Only",notice:"공지 없음",messages:[]},
+"room2":{title:"Second Room",notice:"공지 없음",messages:[]}
+}
 }
 
-function renderTop(){
-    const bar=document.getElementById("topbar")
-    bar.innerHTML=""
-    Object.keys(users).forEach(u=>{
-        bar.innerHTML+=`
-        <button class="userBtn" onclick="switchUser('${u}')">${users[u].name}</button>
-        `
-    })
+let currentRoom="room1"
+let currentUser="SEORIN"
+
+function save(){
+localStorage.setItem("rooms",JSON.stringify(rooms))
 }
-renderTop()
+
+function renderRooms(){
+const el=document.getElementById("roomList")
+el.innerHTML=""
+Object.keys(rooms).forEach(r=>{
+el.innerHTML+=`<div class="roomBtn" onclick="openRoom('${r}')">${rooms[r].title}</div>`
+})
+}
+renderRooms()
+
+function openRoom(r){
+currentRoom=r
+document.getElementById("roomTitle").innerText=rooms[r].title
+document.getElementById("notice").innerText=rooms[r].notice
+renderChat()
+}
+
+function renderUsers(){
+const bar=document.getElementById("userBar")
+bar.innerHTML=""
+Object.keys(users).forEach(u=>{
+bar.innerHTML+=`<button onclick="switchUser('${u}')">${u}</button>`
+})
+}
+renderUsers()
 
 function switchUser(u){
-    current=u
-    document.documentElement.style.setProperty('--theme',users[u].theme)
-    renderChat()
+currentUser=u
 }
 
 function renderChat(){
-    const chat=document.getElementById("chat")
-    chat.innerHTML=""
-    messages.forEach(m=>{
-        const user=users[m.from]
-        const me=(m.from===current)?"msg me":"msg"
+const chat=document.getElementById("chat")
+chat.innerHTML=""
 
-        let imgs=""
-        if(m.images){
-            imgs='<div class="msgImgs">'
-            m.images.forEach(i=>imgs+=`<img src="${i}">`)
-            imgs+='</div>'
-        }
+rooms[currentRoom].messages.forEach(m=>{
+const me=(m.user===currentUser)?"msg me":"msg"
+let imgs=""
+if(m.images){
+imgs='<div class="msgImgs">'
+m.images.forEach(i=>imgs+=`<img src="${i}">`)
+imgs+='</div>'
+}
 
-        chat.innerHTML+=`
-        <div class="${me}">
-            <img src="${user.img}">
-            <div>
-            <b>${user.name} ${user.badge}</b>
-            <div class="bubble">${m.text||""}${imgs}</div>
-            </div>
-        </div>
-        `
-    })
+chat.innerHTML+=`
+<div class="${me}">
+<img src="${users[m.user].img}">
+<div class="bubble">${m.text||""}${imgs}</div>
+</div>
+`
+})
 }
 
 function sendMsg(){
-    const text=document.getElementById("msgInput").value
-    const files=document.getElementById("imgInput").files
-    let imgs=[]
-
-    for(let f of files){
-        imgs.push(URL.createObjectURL(f))
-    }
-
-    messages.push({from:current,text:text,images:imgs})
-    saveData()
-
-    document.getElementById("msgInput").value=""
-    document.getElementById("imgInput").value=""
-    renderChat()
+const text=document.getElementById("msgInput").value
+const files=document.getElementById("imgInput").files
+let imgs=[]
+for(let f of files){
+imgs.push(URL.createObjectURL(f))
 }
 
-/* Enter 전송 / Shift+Enter 줄바꿈 */
-document.getElementById("msgInput").addEventListener("keydown",function(e){
-    if(e.key==="Enter" && !e.shiftKey){
-        e.preventDefault()
-        sendMsg()
-    }
+rooms[currentRoom].messages.push({
+user:currentUser,
+text:text,
+images:imgs
 })
 
+save()
 renderChat()
+
+document.getElementById("msgInput").value=""
+document.getElementById("imgInput").value=""
+}
+
+/* Enter 전송 */
+document.getElementById("msgInput").addEventListener("keydown",function(e){
+if(e.key==="Enter"&&!e.shiftKey){
+e.preventDefault()
+sendMsg()
+}
+})
+
+openRoom(currentRoom)
 </script>
 
 </body>
 </html>
+
